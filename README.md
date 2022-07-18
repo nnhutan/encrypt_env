@@ -26,3 +26,9 @@ To edit environment variables
 ```
 encrypt_env edit
 ```
+
+To get value of environment variables
+```
+EncryptEnv.secrets[:key]
+EncryptEnv.secrets_all[:environment_type][:key]
+```
