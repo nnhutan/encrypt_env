@@ -32,8 +32,7 @@ unless command_class
 end
 
 begin
-  command = command_class.new(argv)
-  command.run!
+  command_class.call
 rescue ArgumentError => e
   puts e.message
   exit 1
