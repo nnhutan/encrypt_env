@@ -3,18 +3,18 @@ name: Ruby Gem
 on:
   push:
     branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
 
 jobs:
-  build:
-    name: Build + Publish
+  release-please:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
     steps:
+    - uses: google-github-actions/release-please-action@v3.1.2
+      id: release
+      with:
+        release-type: ruby
+        package-name: encrypt_env
+        bump-minor-pre-major: true
+
     - uses: actions/checkout@v3
     - name: Set up Ruby 2.6
       uses: actions/setup-ruby@v1
