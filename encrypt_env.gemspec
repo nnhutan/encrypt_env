@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
+require_relative 'lib/encrypt_env/version'
+
 Gem::Specification.new do |spec|
   spec.name = 'encrypt_env'
-  spec.version = '0.0.9'
+  spec.version = EncryptEnv::VERSION
   spec.required_ruby_version = '>= 2.6.0'
   spec.summary = 'Ecrypt secrets.yml file'
   spec.description = 'Encrypts and decrypts environment variables'
