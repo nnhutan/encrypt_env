@@ -4,36 +4,32 @@
 
 require 'encrypt_env'
 
-COMMANDS = {
-  'setup' => EncryptEnv.setup,
-  'secrets' => EncryptEnv.secrets,
-  'secrets_all' => EncryptEnv.secrets_all,
-  'edit' => EncryptEnv.edit
-}.freeze
-
 argv = ARGV
 action = argv.shift
-command_class = COMMANDS[action]
-unless command_class
-  if ['help', '--help', '-h'].include?(action)
-    puts <<~HELP
-      Usage:
-        encrypt_env setup
-        encrypt_env secrets
-        encrypt_env secrets_all
-        encrypt_env edit
-    HELP
 
-    exit 0
-  else
-    puts "Unknown action: #{action}"
-    exit 1
-  end
-end
+if action == 'setup'
+  EncryptEnv.setup
+  exit 0
+elsif action == 'show'
+  EncryptEnv.secrets
+  exit 0
+elsif action == 'all'
+  EncryptEnv.secrets_all
+  exit 0
+elsif action == 'edit'
+  EncryptEnv.edit
+  exit 0
+elsif ['help', '--help', '-h'].include?(action)
+  puts <<~HELP
+    Usage:
+      encrypt_env setup
+      encrypt_env secrets
+      encrypt_env secrets_all
+      encrypt_env edit
+  HELP
 
-begin
-  command_class.call
-rescue ArgumentError => e
-  puts e.message
+  exit 0
+else
+  puts "Unknown action: #{action}"
   exit 1
 end
