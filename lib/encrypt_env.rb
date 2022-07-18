@@ -4,6 +4,7 @@ require 'securerandom'
 require 'openssl'
 require 'yaml'
 require 'active_support/core_ext/hash/indifferent_access'
+require 'tempfile'
 
 # gem 'encrypt_env'
 class EncryptEnv
