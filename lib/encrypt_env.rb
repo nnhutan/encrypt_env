@@ -1,61 +1,108 @@
 require 'securerandom'
 require 'openssl'
 require 'yaml'
-require "active_support/core_ext/hash/indifferent_access"
+require 'active_support/core_ext/hash/indifferent_access'
 
+# gem 'encrypt_env'
 class EncryptEnv
-  def initialize
+  def self.master_key
+    key = File.read("#{@path_root}/config/master.key")
+    [key].pack('H*')
   end
 
-  def self.encrypt
-    # Get the path to the secret.yml file
-    @secret_file = File.expand_path('/home/nhutan/Desktop/encrypt_env/config/secret.yml')
+  def self.data_decrypt(raw_data)
+    encrypted = raw_data.slice(0, raw_data.length - 28)
+    iv = raw_data.slice(raw_data.length - 28, 12)
+    tag = raw_data.slice(raw_data.length - 16, 16)
+    { encrypted: encrypted, iv: iv, tag: tag }
+  end
 
-    # cipher aes-128-GCM
-    cipher = OpenSSL::Cipher::AES.new(128, :GCM)
+  def self.encrypt(content)
+    cipher = OpenSSL::Cipher.new('aes-128-gcm')
     cipher.encrypt
-    key = cipher.random_key
-    cipher.key = key
-    @iv = cipher.random_iv
-
-    # save key in master.key file
-    File.open('/home/nhutan/Desktop/encrypt_env/config/master.key', 'w') { |file| file.write(key.unpack('H*')[0]) }
-
-    encrypted = cipher.update(File.read(@secret_file)) + cipher.final
-
-    @tag = cipher.auth_tag
-    # save encrypted content in secret.yml.enc file
-    File.open('/home/nhutan/Desktop/encrypt_env/config/secret.yml.enc', 'w') { |file| file.write(encrypted.unpack('H*').join) }
-  end
-
-  def self.secrets
-    decipher = OpenSSL::Cipher::AES.new(128, :GCM)
-    decipher.decrypt
-    key = File.read('/home/nhutan/Desktop/encrypt_env/config/master.key')
-    decipher.key = [key].pack('H*')
-    decipher.iv = @iv
-    decipher.auth_tag = @tag
-    encrypted = File.read('/home/nhutan/Desktop/encrypt_env/config/secret.yml.enc')
-    @decrypted = HashWithIndifferentAccess.new(YAML.load((decipher.update([encrypted].pack('H*')) + decipher.final), aliases: true))
-  end
-
-  def self.secrets_production
-    self.secrets unless @decrypted
-    @decrypted[:production]
+    cipher.key = master_key
+    iv = cipher.random_iv
+    encrypted = cipher.update(content) + cipher.final
+    tag = cipher.auth_tag
+    hex_string = (encrypted + iv + tag).unpack1('H*')
+    File.open("#{@path_root}/config/secrets.yml.enc", 'w') { |file| file.write(hex_string) }
   end
 
   def self.decrypt
-    decipher = OpenSSL::Cipher::AES.new(128, :GCM)
+    decipher = OpenSSL::Cipher.new('aes-128-gcm')
     decipher.decrypt
-    key = File.read('/home/nhutan/Desktop/encrypt_env/config/master.key')
-    decipher.key = [key].pack('H*')
-    decipher.iv = @iv
-    decipher.auth_tag = @tag
-    encrypted = File.read('/home/nhutan/Desktop/encrypt_env/config/secret.yml.enc')
-    decrypted = decipher.update([encrypted].pack('H*')) + decipher.final
-    # save decrypted content in secret_result.yml file
-    File.open('/home/nhutan/Desktop/encrypt_env/config/secret_result.yml', 'w') { |file| file.write(decrypted) }
+    hex_string = File.read("#{@path_root}/config/secrets.yml.enc")
+    data_decrypt = self.data_decrypt([hex_string].pack('H*'))
+    decipher.iv = data_decrypt[:iv]
+    decipher.key = data_decrypt[:master_key]
+    decipher.auth_tag = data_decrypt[:tag]
+
+    decipher.update(encrypted) + decipher.final
   end
 
+  def self.path_root
+    @path_root = if defined?(Rails)
+                   Rails.root.to_s
+                 elsif defined?(Bundler)
+                   Bundler.root.to_s
+                 else
+                   Dir.pwd
+                 end
+  end
 
+  def self.setup
+    path_root
+    @secret_file = File.expand_path("#{@path_root}/config/secrets.yml")
+    key = OpenSSL::Random.random_bytes(16)
+    # save key in master.key file
+    File.open("#{@path_root}/config/master.key", 'w') { |file| file.write(key.unpack1('H*')) }
+    encrypt(File.read(@secret_file))
+  end
+
+  def self.edit
+    path_root unless @path_root
+    secrets unless @decrypted
+    Tempfile.create do |f|
+      f.write(decrypt)
+      f.flush
+      f.rewind
+      system("vim #{f.path}")
+      encrypt(File.read(f.path))
+      @decrypted = nil
+    end
+  end
+
+  def self.secrets_all
+    path_root unless @path_root
+    secrets unless @decrypted
+    @decrypted
+  end
+
+  def self.secrets
+    path_root unless @path_root
+    @decrypted = HashWithIndifferentAccess.new(YAML.safe_load(
+                                                 decrypt, aliases: true
+                                               ))
+    @decrypted[Rails.env.to_sym] || @decrypted[:default]
+  end
+
+  def self.secrets_production
+    secrets unless @decrypted
+    @decrypted[:production]
+  end
+
+  def self.secrets_development
+    secrets unless @decrypted
+    @decrypted[:development]
+  end
+
+  def self.secrets_test
+    secrets unless @decrypted
+    @decrypted[:test]
+  end
+
+  def self.secrets_staging
+    secrets unless @decrypted
+    @decrypted[:staging]
+  end
 end
