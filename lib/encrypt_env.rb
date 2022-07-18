@@ -82,6 +82,8 @@ class EncryptEnv
   end
 
   def self.secrets
+    return @decrypted if @decrypted
+
     path_root unless @path_root
     @decrypted = HashWithIndifferentAccess.new(YAML.safe_load(
                                                  decrypt, aliases: true
@@ -111,5 +113,13 @@ class EncryptEnv
   def self.secrets_staging
     secrets unless @decrypted
     @decrypted[:staging]
+  end
+
+  def self.show
+    puts secrets.inspect
+  end
+
+  def self.show_all
+    puts secrets_all.inspect
   end
 end

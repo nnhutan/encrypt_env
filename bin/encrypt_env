@@ -11,10 +11,10 @@ if action == 'setup'
   EncryptEnv.setup
   exit 0
 elsif action == 'show'
-  EncryptEnv.secrets
+  EncryptEnv.show
   exit 0
 elsif action == 'all'
-  EncryptEnv.secrets_all
+  EncryptEnv.show_all
   exit 0
 elsif action == 'edit'
   EncryptEnv.edit

@@ -2,7 +2,7 @@
 
 Gem::Specification.new do |spec|
   spec.name = 'encrypt_env'
-  spec.version = '0.0.4'
+  spec.version = '0.0.5'
   spec.required_ruby_version = '>= 2.6.0'
   spec.summary = 'Ecrypt secrets.yml file'
   spec.description = 'Encrypts and decrypts environment variables'
