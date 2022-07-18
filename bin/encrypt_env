@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby
+
+# frozen_string_literal: true
+
+require 'encrypt_env'
+
+COMMANDS = {
+  'setup' => EncryptEnv.setup,
+  'secrets' => EncryptEnv.secrets,
+  'secrets_all' => EncryptEnv.secrets_all,
+  'edit' => EncryptEnv.edit
+}.freeze
+
+argv = ARGV
+action = argv.shift
+command_class = COMMANDS[action]
+unless command_class
+  if ['help', '--help', '-h'].include?(action)
+    puts <<~HELP
+      Usage:
+        encrypt_env setup
+        encrypt_env secrets
+        encrypt_env secrets_all
+        encrypt_env edit
+    HELP
+
+    exit 0
+  else
+    puts "Unknown action: #{action}"
+    exit 1
+  end
+end
+
+begin
+  command = command_class.new(argv)
+  command.run!
+rescue ArgumentError => e
+  puts e.message
+  exit 1
+end

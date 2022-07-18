@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'securerandom'
 require 'openssl'
 require 'yaml'
@@ -5,19 +7,19 @@ require 'active_support/core_ext/hash/indifferent_access'
 
 # gem 'encrypt_env'
 class EncryptEnv
-  def self.master_key
+  private_class_method def self.master_key
     key = File.read("#{@path_root}/config/master.key")
     [key].pack('H*')
   end
 
-  def self.data_decrypt(raw_data)
+  private_class_method def self.data_decrypt(raw_data)
     encrypted = raw_data.slice(0, raw_data.length - 28)
     iv = raw_data.slice(raw_data.length - 28, 12)
     tag = raw_data.slice(raw_data.length - 16, 16)
     { encrypted: encrypted, iv: iv, tag: tag }
   end
 
-  def self.encrypt(content)
+  private_class_method def self.encrypt(content)
     cipher = OpenSSL::Cipher.new('aes-128-gcm')
     cipher.encrypt
     cipher.key = master_key
@@ -28,19 +30,19 @@ class EncryptEnv
     File.open("#{@path_root}/config/secrets.yml.enc", 'w') { |file| file.write(hex_string) }
   end
 
-  def self.decrypt
+  private_class_method def self.decrypt
     decipher = OpenSSL::Cipher.new('aes-128-gcm')
     decipher.decrypt
     hex_string = File.read("#{@path_root}/config/secrets.yml.enc")
     data_decrypt = self.data_decrypt([hex_string].pack('H*'))
     decipher.iv = data_decrypt[:iv]
-    decipher.key = data_decrypt[:master_key]
+    decipher.key = master_key
     decipher.auth_tag = data_decrypt[:tag]
 
-    decipher.update(encrypted) + decipher.final
+    decipher.update(data_decrypt[:encrypted]) + decipher.final
   end
 
-  def self.path_root
+  private_class_method def self.path_root
     @path_root = if defined?(Rails)
                    Rails.root.to_s
                  elsif defined?(Bundler)
@@ -83,7 +85,11 @@ class EncryptEnv
     @decrypted = HashWithIndifferentAccess.new(YAML.safe_load(
                                                  decrypt, aliases: true
                                                ))
-    @decrypted[Rails.env.to_sym] || @decrypted[:default]
+    unless defined?(Rails)
+      env = `rails r "print Rails.env"`.to_sym
+      return @decrypted[env] || @decrypted[:default] || @decrypted
+    end
+    @decrypted[Rails.env.to_sym] || @decrypted[:default] || @decrypted
   end
 
   def self.secrets_production
