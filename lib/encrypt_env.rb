@@ -27,7 +27,8 @@ class EncryptEnv
     iv = cipher.random_iv
     encrypted = cipher.update(content) + cipher.final
     tag = cipher.auth_tag
-    hex_string = (encrypted + iv + tag).unpack1('H*')
+    # rubocop: disable all
+    hex_string = (encrypted + iv + tag).unpack('H*').first
     File.open("#{@path_root}/config/secrets.yml.enc", 'w') { |file| file.write(hex_string) }
   end
 
@@ -58,7 +59,7 @@ class EncryptEnv
     @secret_file = File.expand_path("#{@path_root}/config/secrets.yml")
     key = OpenSSL::Random.random_bytes(16)
     # save key in master.key file
-    File.open("#{@path_root}/config/master.key", 'w') { |file| file.write(key.unpack1('H*')) }
+    File.open("#{@path_root}/config/master.key", 'w') { |file| file.write(key.unpack('H*').first) }
     encrypt(File.read(@secret_file))
   end
 
