@@ -88,7 +88,7 @@ class EncryptEnv
     return @decrypted if @decrypted
 
     path_root unless @path_root
-    @decrypted = HashWithIndifferentAccess.new(YAML.load(decrypt))
+    @decrypted = HashWithIndifferentAccess.new(YAML.load(decrypt, aliases: true))
     unless defined?(Rails)
       env = `rails r "print Rails.env"`.to_sym
       return @decrypted[env] || @decrypted[:default] || @decrypted
