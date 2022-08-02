@@ -7,6 +7,7 @@ require 'active_support/core_ext/hash/indifferent_access'
 require 'tempfile'
 
 # gem 'encrypt_env'
+# rubocop: disable all
 class EncryptEnv
   private_class_method def self.master_key
     key = File.read("#{@path_root}/config/master.key")
@@ -17,7 +18,7 @@ class EncryptEnv
     encrypted = raw_data.slice(0, raw_data.length - 28)
     iv = raw_data.slice(raw_data.length - 28, 12)
     tag = raw_data.slice(raw_data.length - 16, 16)
-    { encrypted: encrypted, iv: iv, tag: tag }
+    return { encrypted: encrypted, iv: iv, tag: tag }
   end
 
   private_class_method def self.encrypt(content)
@@ -27,7 +28,6 @@ class EncryptEnv
     iv = cipher.random_iv
     encrypted = cipher.update(content) + cipher.final
     tag = cipher.auth_tag
-    # rubocop: disable all
     hex_string = (encrypted + iv + tag).unpack('H*').first
     File.open("#{@path_root}/config/secrets.yml.enc", 'w') { |file| file.write(hex_string) }
   end
@@ -36,10 +36,10 @@ class EncryptEnv
     decipher = OpenSSL::Cipher.new('aes-128-gcm')
     decipher.decrypt
     hex_string = File.read("#{@path_root}/config/secrets.yml.enc")
-    data_decrypt = self.data_decrypt([hex_string].pack('H*'))
-    decipher.iv = data_decrypt[:iv]
+    data = data_decrypt([hex_string].pack('H*'))
+    decipher.iv = data[:iv]
     decipher.key = master_key
-    decipher.auth_tag = data_decrypt[:tag]
+    decipher.auth_tag = data[:tag]
 
     decipher.update(data_decrypt[:encrypted]) + decipher.final
   end
