@@ -41,7 +41,7 @@ class EncryptEnv
     decipher.key = master_key
     decipher.auth_tag = data[:tag]
 
-    decipher.update(data_decrypt[:encrypted]) + decipher.final
+    decipher.update(data[:encrypted]) + decipher.final
   end
 
   private_class_method def self.path_root
