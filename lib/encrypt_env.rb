@@ -68,7 +68,7 @@ class EncryptEnv
   def self.edit
     path_root unless @path_root
     secrets unless @decrypted
-    Tempfile.create do |f|
+    Tempfile.create('secrets.yml') do |f|
       f.write(decrypt)
       f.flush
       f.rewind
