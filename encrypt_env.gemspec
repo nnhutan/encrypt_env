@@ -5,7 +5,7 @@ require_relative 'lib/encrypt_env/version'
 Gem::Specification.new do |spec|
   spec.name = 'encrypt_env'
   spec.version = EncryptEnv::VERSION
-  spec.required_ruby_version = '>= 2.6.0'
+  spec.required_ruby_version = '>= 2.3.0'
   spec.summary = 'Ecrypt secrets.yml file'
   spec.description = 'Encrypts and decrypts environment variables'
   spec.homepage = 'https://github.com/nnhutan/encrypt_env.git'
