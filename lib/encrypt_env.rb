@@ -5,6 +5,7 @@ require 'openssl'
 require 'yaml'
 require 'active_support/core_ext/hash/indifferent_access'
 require 'tempfile'
+require 'pry'
 
 # gem 'encrypt_env'
 class EncryptEnv
@@ -120,10 +121,10 @@ class EncryptEnv
   end
 
   def self.show
-    puts secrets.inspect
+    Pry::ColorPrinter.pp(secrets)
   end
 
   def self.show_all
-    puts secrets_all.inspect
+    Pry::ColorPrinter.pp(secrets_all)
   end
 end
