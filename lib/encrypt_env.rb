@@ -89,7 +89,7 @@ class EncryptEnv
   end
 
   def self.secrets
-    return @decrypted if @decrypted
+    @decrypted
 
     path_root unless @path_root
     @decrypted = HashWithIndifferentAccess.new(YAML.load(decrypt, aliases: true))
