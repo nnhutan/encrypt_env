@@ -63,6 +63,9 @@ class EncryptEnv
     # save key in master.key file
     File.open("#{@path_root}/config/master.key", 'w') { |file| file.write(key.unpack('H*')[0]) }
     encrypt(File.read(@secret_file))
+    system("echo '/config/master.key' >> #{@path_root}/.gitignore")
+    system("echo '/config/secrets.yml' >> #{@path_root}/.gitignore")
+    system("echo 'Set up complete'")
   end
 
   def self.edit
