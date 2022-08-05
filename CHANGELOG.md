@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/nnhutan/encrypt_env/compare/v1.1.3...v1.1.4) (2022-08-05)
+
+
+### Features
+
+* Merge pull request [#45](https://github.com/nnhutan/encrypt_env/issues/45) from nnhutan/fix-bug ([07a81ce](https://github.com/nnhutan/encrypt_env/commit/07a81ceeaab7445c31d1144eced96dcba61a8f55))
+
 ### [1.1.3](https://github.com/nnhutan/encrypt_env/compare/v1.1.2...v1.1.3) (2022-08-04)
 
 
