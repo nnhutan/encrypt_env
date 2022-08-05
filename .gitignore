@@ -1,11 +1,3 @@
 config
 .rubocop.yml
 *.gem
-/config/master.key
-/config/secrets.yml
-/config/master.key
-/config/secrets.yml
-/config/master.key
-/config/secrets.yml
-/config/master.key
-/config/secrets.yml
