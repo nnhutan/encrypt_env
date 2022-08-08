@@ -122,12 +122,10 @@ class EncryptEnv
   end
 
   def self.show
-    # Pry::ColorPrinter.pp(secrets)
     jj secrets
   end
 
   def self.show_all
-    # Pry::ColorPrinter.pp(secrets_all)
     jj secrets_all
   end
 end
