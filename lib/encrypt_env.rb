@@ -10,8 +10,19 @@ require 'json'
 # gem 'encrypt_env'
 class EncryptEnv
   private_class_method def self.master_key
-    key = File.read("#{@path_root}/config/master.key").strip
-    [key].pack('H*')
+    if File.file?("#{@path_root}/config/master.key")
+      key = File.read("#{@path_root}/config/master.key").strip
+      @master_key = [key].pack('H*')
+      puts 'Get master key success!'
+      true
+    elsif ENV.key?('MASTER_KEY')
+      @master_key = [ENV['MASTER_KEY']].pack('H*')
+      puts 'Get master key success!'
+      true
+    else
+      puts 'Get master key fail!'
+      false
+    end
   end
 
   private_class_method def self.data_decrypt(raw_data)
@@ -22,9 +33,10 @@ class EncryptEnv
   end
 
   private_class_method def self.encrypt(content)
+    master_key unless @master_key
     cipher = OpenSSL::Cipher.new('aes-128-gcm')
     cipher.encrypt
-    cipher.key = master_key
+    cipher.key = @master_key
     iv = cipher.random_iv
     cipher.auth_data = ''
     encrypted = cipher.update(content) + cipher.final
@@ -34,17 +46,25 @@ class EncryptEnv
   end
 
   private_class_method def self.decrypt
+    path_root unless @path_root
+    if @master_key.nil? && !master_key
+      puts "master key not found in 'config/master.key' file and 'MASTER_KEY' environment variable!"
+      @raw_decrypted = ''
+      return false
+    end
     decipher = OpenSSL::Cipher.new('aes-128-gcm')
     decipher.decrypt
     hex_string = File.read("#{@path_root}/config/secrets.yml.enc")
     data = data_decrypt([hex_string].pack('H*'))
     encrypted = data[:encrypted]
-    decipher.key = master_key
+    decipher.key = @master_key
     decipher.iv = data[:iv]
     decipher.auth_tag = data[:tag]
     decipher.auth_data = ''
 
-    decipher.update(encrypted) + decipher.final
+    @raw_decrypted = decipher.update(encrypted) + decipher.final
+    @decrypted = HashWithIndifferentAccess.new(YAML.load(@raw_decrypted, aliases: true))
+    true
   end
 
   private_class_method def self.path_root
@@ -71,10 +91,10 @@ class EncryptEnv
   end
 
   def self.edit
-    path_root unless @path_root
-    secrets unless @decrypted
+    return unless decrypt
+
     Tempfile.create('secrets.yml') do |f|
-      f.write(decrypt)
+      f.write(@raw_decrypted)
       f.flush
       f.rewind
       system("vim #{f.path}")
@@ -84,41 +104,21 @@ class EncryptEnv
   end
 
   def self.secrets_all
-    path_root unless @path_root
-    secrets unless @decrypted
-    @decrypted
+    return @decrypted if @decrypted
+
+    return @decrypted if decrypt
+
+    {}
   end
 
   def self.secrets
-    @decrypted
+    return {} if !@decrypted && !decrypt
 
-    path_root unless @path_root
-    @decrypted = HashWithIndifferentAccess.new(YAML.load(decrypt, aliases: true))
     unless defined?(Rails)
       env = `rails r "print Rails.env"`.to_sym
-      return @decrypted[env] || @decrypted[:default] || @decrypted
+      return @decrypted[env]
     end
-    @decrypted[Rails.env.to_sym] || @decrypted[:default] || @decrypted
-  end
-
-  def self.secrets_production
-    secrets unless @decrypted
-    @decrypted[:production]
-  end
-
-  def self.secrets_development
-    secrets unless @decrypted
-    @decrypted[:development]
-  end
-
-  def self.secrets_test
-    secrets unless @decrypted
-    @decrypted[:test]
-  end
-
-  def self.secrets_staging
-    secrets unless @decrypted
-    @decrypted[:staging]
+    @decrypted[Rails.env.to_sym]
   end
 
   def self.show
