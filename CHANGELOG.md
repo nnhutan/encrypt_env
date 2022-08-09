@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.2.0](https://github.com/nnhutan/encrypt_env/compare/v1.1.6...v1.2.0) (2022-08-09)
+## [1.1.7](https://github.com/nnhutan/encrypt_env/compare/v1.1.6...v1.1.7) (2022-08-09)
 
 
 ### Features
