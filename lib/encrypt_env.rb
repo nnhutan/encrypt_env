@@ -9,23 +9,35 @@ require 'json'
 
 # gem 'encrypt_env'
 class EncryptEnv
+  private_class_method def self.path_root
+    @path_root = (defined?(Rails) && Rails.root.to_s) || (defined?(Bundler) && Bundler.root.to_s) || Dir.pwd
+  end
+
   private_class_method def self.master_key
     if File.file?("#{@path_root}/config/master.key")
       key = File.read("#{@path_root}/config/master.key").strip
-      @master_key = [key].pack('H*')
-      puts 'Get master key success!'
-      true
     elsif ENV.key?('MASTER_KEY')
-      @master_key = [ENV['MASTER_KEY']].pack('H*')
-      puts 'Get master key success!'
-      true
+      key = ENV['MASTER_KEY']
     else
-      puts 'Get master key fail!'
       false
     end
+    @master_key = [key].pack('H*')
+    true
   end
 
-  private_class_method def self.data_decrypt(raw_data)
+  private_class_method def self.master_key?
+    if @master_key.nil? && !master_key
+      puts "master key not found in 'config/master.key' file and 'MASTER_KEY' environment variable!"
+      @raw_decrypted = ''
+      return false
+    end
+    true
+  end
+
+  private_class_method def self.data_to_decrypt
+    hex_string = File.read("#{@path_root}/config/secrets.yml.enc")
+    raw_data = [hex_string].pack('H*')
+
     encrypted = raw_data.slice(0, raw_data.length - 28)
     iv = raw_data.slice(raw_data.length - 28, 12)
     tag = raw_data.slice(raw_data.length - 16, 16)
@@ -47,15 +59,11 @@ class EncryptEnv
 
   private_class_method def self.decrypt
     path_root unless @path_root
-    if @master_key.nil? && !master_key
-      puts "master key not found in 'config/master.key' file and 'MASTER_KEY' environment variable!"
-      @raw_decrypted = ''
-      return false
-    end
+    return unless master_key?
+
     decipher = OpenSSL::Cipher.new('aes-128-gcm')
     decipher.decrypt
-    hex_string = File.read("#{@path_root}/config/secrets.yml.enc")
-    data = data_decrypt([hex_string].pack('H*'))
+    data = data_to_decrypt
     encrypted = data[:encrypted]
     decipher.key = @master_key
     decipher.iv = data[:iv]
@@ -67,24 +75,14 @@ class EncryptEnv
     true
   end
 
-  private_class_method def self.path_root
-    @path_root = if defined?(Rails)
-                   Rails.root.to_s
-                 elsif defined?(Bundler)
-                   Bundler.root.to_s
-                 else
-                   Dir.pwd
-                 end
-  end
-
   def self.setup
     path_root
-    @secret_file = File.expand_path("#{@path_root}/config/secrets.yml")
+    secret_file = File.expand_path("#{@path_root}/config/secrets.yml")
     key = OpenSSL::Random.random_bytes(16)
     # save key in master.key file
     File.open("#{@path_root}/config/master.key", 'w') { |file| file.write(key.unpack('H*')[0]) }
-    encrypt(File.read(@secret_file))
-    File.rename(@secret_file, "#{@path_root}/config/secrets.yml.old")
+    encrypt(File.read(secret_file))
+    File.rename(secret_file, "#{@path_root}/config/secrets.yml.old")
     system("echo '/config/master.key' >> #{@path_root}/.gitignore")
     system("echo '/config/secrets.yml.old' >> #{@path_root}/.gitignore")
     system("echo 'Set up complete!'")
