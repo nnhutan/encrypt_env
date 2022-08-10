@@ -8,34 +8,86 @@ require 'tempfile'
 require 'json'
 
 # gem 'encrypt_env'
+# rubocop:disable Metrics/ClassLength
+# rubocop:disable Metrics/MethodLength
 class EncryptEnv
-  private_class_method def self.path_root
-    @path_root = (defined?(Rails) && Rails.root.to_s) || (defined?(Bundler) && Bundler.root.to_s) || Dir.pwd
+  private_class_method def self.define_option
+    puts "Options to 'encrypt secrets.yml' file"
+    puts '1. Generate only one master.key and one encrypted file for all environment'
+    puts '2. Generate master.key and encrypted file for each environment'
+
+    loop do
+      @opt = gets.chomp.to_i
+      break if @opt == 1 || @opt == 2
+
+      puts "Please enter '1' or '2'!"
+    end
+
+    puts "Your option is #{@opt}"
   end
 
-  private_class_method def self.master_key
-    if File.file?("#{@path_root}/config/master.key")
-      key = File.read("#{@path_root}/config/master.key").strip
-    elsif ENV.key?('MASTER_KEY')
-      key = ENV['MASTER_KEY']
+  private_class_method def self.load_curr_opt
+    if File.file?("#{Dir.pwd}/config/secrets.yml.enc")
+      @opt = 1
+    elsif Dir["#{Dir.pwd}/config/secrets_*.yml.enc"].length.positive?
+      @opt = 2
     else
-      false
+      puts 'You must setup first to encrypt file!'
+      exit
     end
+  end
+
+  private_class_method def self.current_env
+    unless defined?(Rails)
+      env = `rails r "print Rails.env"`
+      return env
+    end
+    Rails.env
+  end
+
+  private_class_method def self.check_key_existence(env = nil)
+    file_name = env.nil? ? 'master.key' : "master_#{env}.key"
+    return if File.file?("#{Dir.pwd}/config/#{file_name}")
+    # return if Dir["#{Dir.pwd}/config/master_*.key"].length.positive? && @opt == 2
+    return if ENV.key?('MASTER_KEY')
+
+    puts 'Please provide master key!'
+    exit
+  end
+
+  private_class_method def self.load_master_key(env = nil)
+    check_key_existence(env)
+    file_path = env ? "#{Dir.pwd}/config/master_#{env}.key" : "#{Dir.pwd}/config/master.key"
+    key = File.file?(file_path) ? File.read(file_path).strip : ENV['MASTER_KEY']
     @master_key = [key].pack('H*')
-    true
   end
 
-  private_class_method def self.master_key?
-    if @master_key.nil? && !master_key
-      puts "master key not found in 'config/master.key' file and 'MASTER_KEY' environment variable!"
-      @raw_decrypted = ''
-      return false
+  private_class_method def self.generate_keys
+    if @opt == 1
+      key = OpenSSL::Random.random_bytes(16)
+      File.open("#{Dir.pwd}/config/master.key", 'w') { |file| file.write(key.unpack('H*')[0]) }
+    else
+      to_hash_type(@content_to_encrypt).each_key do |env|
+        next if env == 'default'
+
+        key = OpenSSL::Random.random_bytes(16)
+        File.open("#{Dir.pwd}/config/master_#{env}.key", 'w') { |file| file.write(key.unpack('H*')[0]) }
+      end
     end
-    true
   end
 
-  private_class_method def self.data_to_decrypt
-    hex_string = File.read("#{@path_root}/config/secrets.yml.enc")
+  private_class_method def self.load_content_to_encrypt
+    secret_file = File.expand_path("#{Dir.pwd}/config/secrets.yml")
+    @content_to_encrypt = File.read(secret_file)
+  end
+
+  private_class_method def self.to_hash_type(raw_data)
+    HashWithIndifferentAccess.new(YAML.load(raw_data, aliases: true))
+  end
+
+  private_class_method def self.load_encrypted_data(env = nil)
+    file_path = env ? "#{Dir.pwd}/config/secrets_#{env}.yml.enc" : "#{Dir.pwd}/config/secrets.yml.enc"
+    hex_string = File.read(file_path)
     raw_data = [hex_string].pack('H*')
 
     encrypted = raw_data.slice(0, raw_data.length - 28)
@@ -44,8 +96,8 @@ class EncryptEnv
     { encrypted: encrypted, iv: iv, tag: tag }
   end
 
-  private_class_method def self.encrypt(content)
-    master_key unless @master_key
+  private_class_method def self.encrypt(content, typ = nil)
+    file_path = typ ? "#{Dir.pwd}/config/secrets_#{typ}.yml.enc" : "#{Dir.pwd}/config/secrets.yml.enc"
     cipher = OpenSSL::Cipher.new('aes-128-gcm')
     cipher.encrypt
     cipher.key = @master_key
@@ -54,16 +106,15 @@ class EncryptEnv
     encrypted = cipher.update(content) + cipher.final
     tag = cipher.auth_tag
     hex_string = (encrypted + iv + tag).unpack('H*')[0]
-    File.open("#{@path_root}/config/secrets.yml.enc", 'w') { |file| file.write(hex_string) }
+    File.open(file_path, 'w') { |file| file.write(hex_string) }
   end
 
-  private_class_method def self.decrypt
-    path_root unless @path_root
-    return unless master_key?
+  private_class_method def self.decrypt(env = nil)
+    load_master_key(env)
 
     decipher = OpenSSL::Cipher.new('aes-128-gcm')
     decipher.decrypt
-    data = data_to_decrypt
+    data = load_encrypted_data(env)
     encrypted = data[:encrypted]
     decipher.key = @master_key
     decipher.iv = data[:iv]
@@ -71,59 +122,86 @@ class EncryptEnv
     decipher.auth_data = ''
 
     @raw_decrypted = decipher.update(encrypted) + decipher.final
-    @decrypted = HashWithIndifferentAccess.new(YAML.load(@raw_decrypted, aliases: true))
-    true
+    @decrypted = to_hash_type(@raw_decrypted)
+  # Catch error if master key is wrong
+  rescue OpenSSL::Cipher::CipherError
+    puts 'Master key is wrong!'
+    exit
+  end
+
+  private_class_method def self.all_decrypted_object
+    obj = {}
+    env_lst = Dir["#{Dir.pwd}/config/secrets_*.yml.enc"].map do |path|
+      path.scan(/secrets_(.*)\.yml\.enc/).flatten.first
+    end
+    env_lst.each do |e|
+      decrypt(e)
+      obj[e] = @decrypted
+    end
+    obj
+  end
+
+  def self.secrets_all
+    return all_decrypted_object if @opt == 2
+
+    decrypt
+    @decrypted
+  end
+
+  def self.secrets(env = nil)
+    load_curr_opt unless @opt
+    return secrets_all if env == 'all'
+
+    if @opt == 1
+      decrypt
+      @decrypted[env || current_env]
+    else
+      decrypt(env || current_env)
+      @decrypted
+    end
   end
 
   def self.setup
-    path_root
-    secret_file = File.expand_path("#{@path_root}/config/secrets.yml")
-    key = OpenSSL::Random.random_bytes(16)
-    # save key in master.key file
-    File.open("#{@path_root}/config/master.key", 'w') { |file| file.write(key.unpack('H*')[0]) }
-    encrypt(File.read(secret_file))
-    File.rename(secret_file, "#{@path_root}/config/secrets.yml.old")
-    system("echo '/config/master.key' >> #{@path_root}/.gitignore")
-    system("echo '/config/secrets.yml.old' >> #{@path_root}/.gitignore")
+    define_option
+    load_content_to_encrypt
+    generate_keys
+
+    if @opt == 1
+      load_master_key
+      encrypt(@content_to_encrypt)
+    else
+      to_hash_type(@content_to_encrypt).each do |env, value|
+        next if env == 'default'
+
+        load_master_key(env)
+        encrypt(value.to_hash.to_yaml, env)
+      end
+    end
+
+    File.rename("#{Dir.pwd}/config/secrets.yml", "#{Dir.pwd}/config/secrets.yml.old")
+    system("echo '/config/master*.key' >> #{Dir.pwd}/.gitignore")
+    system("echo '/config/secrets.yml.old' >> #{Dir.pwd}/.gitignore")
     system("echo 'Set up complete!'")
   end
 
-  def self.edit
-    return unless decrypt
+  def self.edit(env = nil)
+    load_curr_opt unless @opt
+    env ||= current_env if @opt == 2
+    return unless decrypt(env)
 
-    Tempfile.create('secrets.yml') do |f|
+    Tempfile.create("secrets_#{env}.yml") do |f|
       f.write(@raw_decrypted)
       f.flush
       f.rewind
       system("vim #{f.path}")
-      encrypt(File.read(f.path))
+      encrypt(File.read(f.path), env)
       @decrypted = nil
     end
   end
 
-  def self.secrets_all
-    return @decrypted if @decrypted
-
-    return @decrypted if decrypt
-
-    {}
-  end
-
-  def self.secrets
-    return {} if !@decrypted && !decrypt
-
-    unless defined?(Rails)
-      env = `rails r "print Rails.env"`.to_sym
-      return @decrypted[env]
-    end
-    @decrypted[Rails.env.to_sym]
-  end
-
-  def self.show
-    jj secrets
-  end
-
-  def self.show_all
-    jj secrets_all
+  def self.show(env = nil)
+    jj secrets(env)
   end
 end
+# rubocop:enable Metrics/ClassLength
+# rubocop:enable Metrics/MethodLength

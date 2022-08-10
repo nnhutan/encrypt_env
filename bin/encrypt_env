@@ -11,13 +11,21 @@ if action == 'setup'
   EncryptEnv.setup
   exit 0
 elsif action == 'show'
-  EncryptEnv.show
+  if argv[0]
+    EncryptEnv.show(argv[0])
+  else
+    EncryptEnv.show
+  end
   exit 0
 elsif action == 'all'
-  EncryptEnv.show_all
+  EncryptEnv.show('all')
   exit 0
 elsif action == 'edit'
-  EncryptEnv.edit
+  if argv[0]
+    EncryptEnv.edit(argv[0])
+  else
+    EncryptEnv.edit
+  end
   exit 0
 elsif ['help', '--help', '-h'].include?(action)
   puts <<~HELP
