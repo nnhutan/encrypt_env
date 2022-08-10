@@ -1,5 +1,20 @@
 # Changelog
 
+### [1.2.2](https://github.com/nnhutan/encrypt_env/compare/v1.2.1...v1.2.2) (2022-08-10)
+
+
+### Bug Fixes
+
+* fix bug ([604e076](https://github.com/nnhutan/encrypt_env/commit/604e076563a0c521a9c3c53af7c86fd75d9b7af2))
+* Merge pull request [#56](https://github.com/nnhutan/encrypt_env/issues/56) from nnhutan/multi-environment-encrypt ([9cf9490](https://github.com/nnhutan/encrypt_env/commit/9cf9490cfecb931a444a54fa17ead354070276c5))
+* Merge pull request [#57](https://github.com/nnhutan/encrypt_env/issues/57) from nnhutan/multi-environment-encrypt ([6f7d963](https://github.com/nnhutan/encrypt_env/commit/6f7d963e0face4d38ba714b02295fd6ca867f3e1))
+* Merge pull request [#58](https://github.com/nnhutan/encrypt_env/issues/58) from nnhutan/multi-environment-encrypt ([6cd7872](https://github.com/nnhutan/encrypt_env/commit/6cd7872b6552ef6728d86ef093518ef4fc925e1d))
+* Merge pull request [#59](https://github.com/nnhutan/encrypt_env/issues/59) from nnhutan/multi-environment-encrypt ([604e076](https://github.com/nnhutan/encrypt_env/commit/604e076563a0c521a9c3c53af7c86fd75d9b7af2))
+* Merge pull request [#60](https://github.com/nnhutan/encrypt_env/issues/60) from nnhutan/multi-environment-encrypt ([3dbadae](https://github.com/nnhutan/encrypt_env/commit/3dbadaef9fe65e9056326446d792eb026797fa88))
+* update readme ([6f7d963](https://github.com/nnhutan/encrypt_env/commit/6f7d963e0face4d38ba714b02295fd6ca867f3e1))
+* update workflow ([3dbadae](https://github.com/nnhutan/encrypt_env/commit/3dbadaef9fe65e9056326446d792eb026797fa88))
+* update workflow ([6cd7872](https://github.com/nnhutan/encrypt_env/commit/6cd7872b6552ef6728d86ef093518ef4fc925e1d))
+
 ## [1.2.0](https://github.com/nnhutan/encrypt_env/compare/v1.1.7...v1.2.0) (2022-08-10)
 
 
