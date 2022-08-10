@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/nnhutan/encrypt_env/compare/v1.1.7...v1.2.0) (2022-08-10)
+
+
+### Features
+
+* Merge pull request [#54](https://github.com/nnhutan/encrypt_env/issues/54) from nnhutan/multi-environment-encrypt ([f14f48d](https://github.com/nnhutan/encrypt_env/commit/f14f48d1625ad348e6d732184d52cdaa272f97c1))
+
 ## [1.1.7](https://github.com/nnhutan/encrypt_env/compare/v1.1.6...v1.1.7) (2022-08-09)
 
 
