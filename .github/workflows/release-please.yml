@@ -16,7 +16,7 @@ jobs:
           package-name: encrypt_env
           bump-minor-pre-major: true
           version-file: "lib/encrypt_env/version.rb"
-          allowUpates: true
+          allowUpdates: true
 
       - uses: actions/checkout@v3
       - name: Set up Ruby 2.6
