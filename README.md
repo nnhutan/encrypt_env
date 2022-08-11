@@ -1,6 +1,8 @@
+[![Gem Version](https://badge.fury.io/rb/encrypt_env.svg)](https://badge.fury.io/rb/encrypt_env)
+
 # encrypt_env
 
-This is a custom gem for helping encrypt secret.yml files for older Rails version
+This is a custom gem for helping encrypt _/config/secrets.yml_ files for older Rails versions not support the _Rails credential_ feature
 
 # Install
 
