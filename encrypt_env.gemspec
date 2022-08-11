@@ -16,4 +16,6 @@ Gem::Specification.new do |spec|
   spec.files = ['lib/encrypt_env.rb']
   spec.executables << 'encrypt_env'
   spec.metadata = { 'source_code_uri' => 'https://github.com/nnhutan/encrypt_env.git' }
+
+  spec.add_dependency 'awesome_print', '~> 1.9', '>= 1.9.2'
 end

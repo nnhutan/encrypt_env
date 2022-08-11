@@ -27,6 +27,26 @@ elsif action == 'edit'
     EncryptEnv.edit
   end
   exit 0
+elsif action == 'get'
+  key = argv[0]
+  env = argv[1]
+  EncryptEnv.valueof(key, env)
+  exit 0
+elsif action == 'new'
+  key = argv[0]
+  env = argv[1]
+  EncryptEnv.update_variable(key, env, true)
+  exit 0
+elsif action == 'update'
+  key = argv[0]
+  env = argv[1]
+  EncryptEnv.update_variable(key, env, false)
+  exit 0
+elsif action == 'delete'
+  key = argv[0]
+  env = argv[1]
+  EncryptEnv.delete_variable(key, env)
+  exit 0
 elsif ['help', '--help', '-h'].include?(action)
   puts <<~HELP
     Usage:
