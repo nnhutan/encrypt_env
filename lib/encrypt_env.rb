@@ -32,8 +32,7 @@ class EncryptEnv
     elsif Dir["#{Dir.pwd}/config/secrets_*.yml.enc"].length.positive?
       @opt = 2
     else
-      puts 'You must setup first to encrypt file!'
-      exit
+      raise 'You must setup first to encrypt file!'
     end
   end
 
@@ -48,15 +47,19 @@ class EncryptEnv
   private_class_method def self.check_key_existence(env = nil)
     file_name = env.nil? ? 'master.key' : "master_#{env}.key"
     return if File.file?("#{Dir.pwd}/config/#{file_name}")
-    # return if Dir["#{Dir.pwd}/config/master_*.key"].length.positive? && @opt == 2
     return if ENV.key?('MASTER_KEY')
 
-    puts 'Please provide master key!'
-    exit
+    message = env ? "Missing key of #{env} environment!" : 'Missing master key!'
+    raise message
   end
 
   private_class_method def self.load_master_key(env = nil)
-    check_key_existence(env)
+    begin
+      check_key_existence(env)
+    rescue StandardError => e
+      raise e.message
+    end
+
     file_path = env ? "#{Dir.pwd}/config/master_#{env}.key" : "#{Dir.pwd}/config/master.key"
     key = File.file?(file_path) ? File.read(file_path).strip : ENV['MASTER_KEY']
     @master_key = [key].pack('H*')
@@ -82,7 +85,7 @@ class EncryptEnv
   end
 
   private_class_method def self.to_hash_type(raw_data)
-    HashWithIndifferentAccess.new(YAML.load(raw_data, aliases: true))
+    HashWithIndifferentAccess.new(::YAML.load(raw_data, aliases: true))
   end
 
   private_class_method def self.load_encrypted_data(env = nil)
@@ -110,7 +113,11 @@ class EncryptEnv
   end
 
   private_class_method def self.decrypt(env = nil)
-    load_master_key(env)
+    begin
+      load_master_key(env)
+    rescue StandardError => e
+      raise e.message
+    end
 
     decipher = OpenSSL::Cipher.new('aes-128-gcm')
     decipher.decrypt
@@ -125,8 +132,8 @@ class EncryptEnv
     @decrypted = to_hash_type(@raw_decrypted)
   # Catch error if master key is wrong
   rescue OpenSSL::Cipher::CipherError
-    puts 'Master key is wrong!'
-    exit
+    message = env ? "Master key of #{env} environment is wrong!" : 'Master key is wrong!'
+    raise message
   end
 
   private_class_method def self.all_decrypted_object
@@ -159,6 +166,10 @@ class EncryptEnv
       decrypt(env || current_env)
       @decrypted
     end
+  rescue StandardError => e
+    puts e.message
+    @have_error = true
+    {}
   end
 
   def self.setup
@@ -197,10 +208,88 @@ class EncryptEnv
       encrypt(File.read(f.path), env)
       @decrypted = nil
     end
+  rescue StandardError => e
+    puts e.message
   end
 
   def self.show(env = nil)
-    jj secrets(env)
+    # require "awesome_print"
+    value = secrets(env)
+    # ap({})
+    # ap(value) unless @have_error
+    jj value unless @have_error
+    @have_error = false
+  end
+
+  def self.valueof(key, env = nil)
+    value = secrets(env)
+    unless value.key?(key)
+      puts "key '#{key}' does not exist!"
+      return
+    end
+    puts value[key]
+  end
+
+  def self.delete_variable(key, env = nil)
+    load_curr_opt unless @opt
+    if @opt == 1
+      puts 'Only for option 2!'
+      return
+    end
+
+    tail_confirm = env ? " in '#{env}' environent" : nil
+    confirm = "Really? You want to delete '#{key}'#{tail_confirm}? (y/n)"
+    puts confirm
+    a = $stdin.gets.chomp
+    return unless a == 'y'
+
+    value = secrets(env)
+
+    unless value.key?(key)
+      puts "#{key} does not exist!"
+      return
+    end
+
+    value.delete(key)
+    encrypt(value.to_hash.to_yaml, env || current_env)
+    puts "delete '#{key}' successfully!"
+  end
+
+  def self.update_variable(key, env = nil, add_variable = false)
+    load_curr_opt unless @opt
+    if @opt == 1
+      puts 'Only for option 2!'
+      return
+    end
+
+    value = secrets(env)
+    if add_variable && value.key?(key)
+      puts 'Key existed!'
+      return
+    end
+
+    if !value.key?(key) && !add_variable
+      tail_msg = env ? " in #{env} environment" : nil
+      puts "'#{key}' does not exist#{tail_msg}. You want to add '#{key}' as the new key? (y/n)"
+      a = $stdin.gets.chomp
+      return unless a == 'y'
+
+      add_variable = false
+    end
+
+    action = add_variable && 'add' || 'edit'
+    file_name = env ? "#{action}_#{key}_#{env}" : "#{action}_#{key}"
+
+    Tempfile.create(file_name) do |f|
+      f.write(value[key])
+      f.flush
+      f.rewind
+      system("vim #{f.path}")
+      new_value = File.read(f.path)
+      value[key] = new_value.strip
+      encrypt(value.to_hash.to_yaml, env || current_env)
+      @decrypted = nil
+    end
   end
 end
 # rubocop:enable Metrics/ClassLength
