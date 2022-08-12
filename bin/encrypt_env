@@ -3,6 +3,7 @@
 # frozen_string_literal: true
 
 require 'encrypt_env'
+require_relative '../lib/encrypt_env/version'
 
 argv = ARGV
 action = argv.shift
@@ -47,17 +48,26 @@ elsif action == 'delete'
   env = argv[1]
   EncryptEnv.delete_variable(key, env)
   exit 0
+elsif ['-v', '--version', 'version'].include?(action)
+  puts Version::VERSION
+  exit 0
 elsif ['help', '--help', '-h'].include?(action)
   puts <<~HELP
     Usage:
-      encrypt_env setup
-      encrypt_env secrets
-      encrypt_env secrets_all
-      encrypt_env edit
+      encrypt_env setup                                  # To setup for the firt time
+      encrypt_env show all                               # To show all environment variables
+      encrypt_env show / encrypt_env show [environment]  # To show environment variables
+      encrypt_env edit / encrypt_env edit [environment]  # To edit environment variables
+      encrypt_env add variable_name [environment]        # To add environment variable
+      encrypt_env get variable_name [environment]        # To show value of specific variable
+      encrypt_env update variable_name [environment]     # To edit value of specific variable
+      encrypt_env delete variable_name [environment]     # To delete specific variable
+    Or: Visit "https://github.com/nnhutan/encrypt_env" for more information
   HELP
 
   exit 0
 else
   puts "Unknown action: #{action}"
+  puts "Use 'encrypt_env -h' for more help"
   exit 1
 end
