@@ -288,11 +288,15 @@ class EncryptEnv
       f.flush
       f.rewind
       system("vim #{f.path}")
-      new_value = File.read(f.path)
-      value[key] = new_value.strip
+      # new_value = File.read(f.path)
+      new_value = YAML.load_file(f.path)
+      # value[key] = new_value.strip
+      value[key] = new_value
       encrypt(value.to_hash.to_yaml, env || current_env)
       @decrypted = nil
     end
+
+    puts "#{key}\t=>\t#{value[key]}"
   end
 end
 # rubocop:enable Metrics/ClassLength
