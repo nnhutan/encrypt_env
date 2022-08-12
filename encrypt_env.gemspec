@@ -13,7 +13,7 @@ Gem::Specification.new do |spec|
   spec.author = 'Nhu Tan'
   spec.license = 'MIT'
   spec.platform = Gem::Platform::RUBY
-  spec.files = ['lib/encrypt_env.rb']
+  spec.files = ['lib/encrypt_env.rb', 'lib/encrypt_env/version.rb']
   spec.executables << 'encrypt_env'
   spec.metadata = { 'source_code_uri' => 'https://github.com/nnhutan/encrypt_env.git' }
 

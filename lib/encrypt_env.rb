@@ -11,6 +11,8 @@ require 'json'
 # rubocop:disable Metrics/ClassLength
 # rubocop:disable Metrics/MethodLength
 class EncryptEnv
+  @root_path = Dir.pwd
+
   private_class_method def self.define_option
     puts "Options to 'encrypt secrets.yml' file"
     puts '1. Generate only one master.key and one encrypted file for all environment'
@@ -27,9 +29,9 @@ class EncryptEnv
   end
 
   private_class_method def self.load_curr_opt
-    if File.file?("#{Dir.pwd}/config/secrets.yml.enc")
+    if File.file?("#{@root_path}/config/secrets.yml.enc")
       @opt = 1
-    elsif Dir["#{Dir.pwd}/config/secrets_*.yml.enc"].length.positive?
+    elsif Dir["#{@root_path}/config/secrets_*.yml.enc"].length.positive?
       @opt = 2
     else
       raise 'You must setup first to encrypt file!'
@@ -46,7 +48,7 @@ class EncryptEnv
 
   private_class_method def self.check_key_existence(env = nil)
     file_name = env.nil? ? 'master.key' : "master_#{env}.key"
-    return if File.file?("#{Dir.pwd}/config/#{file_name}")
+    return if File.file?("#{@root_path}/config/#{file_name}")
     return if ENV.key?('MASTER_KEY')
 
     message = env ? "Missing key of #{env} environment!" : 'Missing master key!'
@@ -60,7 +62,7 @@ class EncryptEnv
       raise e.message
     end
 
-    file_path = env ? "#{Dir.pwd}/config/master_#{env}.key" : "#{Dir.pwd}/config/master.key"
+    file_path = env ? "#{@root_path}/config/master_#{env}.key" : "#{@root_path}/config/master.key"
     key = File.file?(file_path) ? File.read(file_path).strip : ENV['MASTER_KEY']
     @master_key = [key].pack('H*')
   end
@@ -68,19 +70,19 @@ class EncryptEnv
   private_class_method def self.generate_keys
     if @opt == 1
       key = OpenSSL::Random.random_bytes(16)
-      File.open("#{Dir.pwd}/config/master.key", 'w') { |file| file.write(key.unpack('H*')[0]) }
+      File.open("#{@root_path}/config/master.key", 'w') { |file| file.write(key.unpack('H*')[0]) }
     else
       to_hash_type(@content_to_encrypt).each_key do |env|
         next if env == 'default'
 
         key = OpenSSL::Random.random_bytes(16)
-        File.open("#{Dir.pwd}/config/master_#{env}.key", 'w') { |file| file.write(key.unpack('H*')[0]) }
+        File.open("#{@root_path}/config/master_#{env}.key", 'w') { |file| file.write(key.unpack('H*')[0]) }
       end
     end
   end
 
   private_class_method def self.load_content_to_encrypt
-    secret_file = File.expand_path("#{Dir.pwd}/config/secrets.yml")
+    secret_file = File.expand_path("#{@root_path}/config/secrets.yml")
     @content_to_encrypt = File.read(secret_file)
   end
 
@@ -89,7 +91,7 @@ class EncryptEnv
   end
 
   private_class_method def self.load_encrypted_data(env = nil)
-    file_path = env ? "#{Dir.pwd}/config/secrets_#{env}.yml.enc" : "#{Dir.pwd}/config/secrets.yml.enc"
+    file_path = env ? "#{@root_path}/config/secrets_#{env}.yml.enc" : "#{@root_path}/config/secrets.yml.enc"
     hex_string = File.read(file_path)
     raw_data = [hex_string].pack('H*')
 
@@ -100,7 +102,7 @@ class EncryptEnv
   end
 
   private_class_method def self.encrypt(content, typ = nil)
-    file_path = typ ? "#{Dir.pwd}/config/secrets_#{typ}.yml.enc" : "#{Dir.pwd}/config/secrets.yml.enc"
+    file_path = typ ? "#{@root_path}/config/secrets_#{typ}.yml.enc" : "#{@root_path}/config/secrets.yml.enc"
     cipher = OpenSSL::Cipher.new('aes-128-gcm')
     cipher.encrypt
     cipher.key = @master_key
@@ -138,7 +140,7 @@ class EncryptEnv
 
   private_class_method def self.all_decrypted_object
     obj = {}
-    env_lst = Dir["#{Dir.pwd}/config/secrets_*.yml.enc"].map do |path|
+    env_lst = Dir["#{@root_path}/config/secrets_*.yml.enc"].map do |path|
       path.scan(/secrets_(.*)\.yml\.enc/).flatten.first
     end
     env_lst.each do |e|
@@ -189,9 +191,9 @@ class EncryptEnv
       end
     end
 
-    File.rename("#{Dir.pwd}/config/secrets.yml", "#{Dir.pwd}/config/secrets.yml.old")
-    system("echo '/config/master*.key' >> #{Dir.pwd}/.gitignore")
-    system("echo '/config/secrets.yml.old' >> #{Dir.pwd}/.gitignore")
+    File.rename("#{@root_path}/config/secrets.yml", "#{@root_path}/config/secrets.yml.old")
+    system("echo '/config/master*.key' >> #{@root_path}/.gitignore")
+    system("echo '/config/secrets.yml.old' >> #{@root_path}/.gitignore")
     system("echo 'Set up complete!'")
   end
 
@@ -213,18 +215,19 @@ class EncryptEnv
   end
 
   def self.show(env = nil)
-    # require "awesome_print"
+    require 'awesome_print'
+    require 'date'
     value = secrets(env)
-    # ap({})
-    # ap(value) unless @have_error
-    jj value unless @have_error
+    ap(value) unless @have_error
+    # jj value unless @have_error
     @have_error = false
   end
 
   def self.valueof(key, env = nil)
+    tail_msg = env ? " in '#{env}' environent" : nil
     value = secrets(env)
     unless value.key?(key)
-      puts "key '#{key}' does not exist!"
+      puts "key '#{key}' does not exist#{tail_msg}!"
       return
     end
     puts value[key]
@@ -237,8 +240,8 @@ class EncryptEnv
       return
     end
 
-    tail_confirm = env ? " in '#{env}' environent" : nil
-    confirm = "Really? You want to delete '#{key}'#{tail_confirm}? (y/n)"
+    tail_msg = env ? " in '#{env}' environent" : nil
+    confirm = "Really? You want to delete '#{key}'#{tail_msg}? (y/n)"
     puts confirm
     a = $stdin.gets.chomp
     return unless a == 'y'
@@ -246,13 +249,13 @@ class EncryptEnv
     value = secrets(env)
 
     unless value.key?(key)
-      puts "#{key} does not exist!"
+      puts "#{key} does not exist#{tail_msg}!"
       return
     end
 
     value.delete(key)
     encrypt(value.to_hash.to_yaml, env || current_env)
-    puts "delete '#{key}' successfully!"
+    puts "Delete '#{key}' successfully!"
   end
 
   def self.update_variable(key, env = nil, add_variable = false)
@@ -261,20 +264,20 @@ class EncryptEnv
       puts 'Only for option 2!'
       return
     end
+    tail_msg = env ? " in '#{env}' environment" : nil
 
     value = secrets(env)
     if add_variable && value.key?(key)
-      puts 'Key existed!'
+      puts "Key existed#{tail_msg}!"
       return
     end
 
     if !value.key?(key) && !add_variable
-      tail_msg = env ? " in #{env} environment" : nil
       puts "'#{key}' does not exist#{tail_msg}. You want to add '#{key}' as the new key? (y/n)"
       a = $stdin.gets.chomp
       return unless a == 'y'
 
-      add_variable = false
+      add_variable = true
     end
 
     action = add_variable && 'add' || 'edit'
