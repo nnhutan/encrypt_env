@@ -3,71 +3,85 @@
 # frozen_string_literal: true
 
 require 'encrypt_env'
+require 'optparse'
 require_relative '../lib/encrypt_env/version'
+
+options = {}
+parsers = OptionParser.new do |parser|
+  parser.on('-e', '--environment ENVIRONMENT', 'environment')
+  parser.on('-s', '--set VALUE', 'value')
+  parser.on('-t', '--type TYPE', 'type of variable')
+  parser.on('-a', '--all', 'show all') do
+    EncryptEnv.show('all')
+    exit
+  end
+  parser.on('-v', '--version', 'version') do
+    puts Version::VERSION
+    exit
+  end
+  parser.on('-h', '--help', 'help') do
+    puts <<~HELP
+      Usage:
+        encrypt_env setup                                  # To setup for the firt time
+
+        encrypt_env show                                   # To show environment variables of current environment
+        encrypt_env show -a                                # To show all environment variables
+        encrypt_env show -e [environment]                  # To show specific environment variables
+        encrypt_env show [variable_name] -e [environment]  # To show value of specific variable
+
+        encrypt_env edit                                   # To edit environment variables of current environment
+        encrypt_env edit -e [environment]                  # To edit specific environment variables
+        encrypt_env edit [variable_name] -e [environment]  # To edit value of specific variable
+
+        encrypt_env create variable_name                   # To create environment variable in current environment
+        encrypt_env create variable_name -e [environment]  # To create environment variable in specific environment
+        # To create environment variable in specific environment with value and type
+        encrypt_env create variable_name -s [value] -e [environment]
+        encrypt_env create variable_name -s [value] -e [environment] -t [type]
+
+        encrypt_env delete variable_name                   # To delete environment variable in current environment
+        encrypt_env delete variable_name -e [environment]  # To delete environment variable in specific environment
+
+      Or: Visit "https://github.com/nnhutan/encrypt_env" for more information
+    HELP
+    exit
+  end
+end
+
+parsers.parse!(into: options)
 
 argv = ARGV
 action = argv.shift
+variable_name = argv.shift
 
-if action == 'setup'
+case action
+when 'setup'
   EncryptEnv.setup
-  exit 0
-elsif action == 'show'
-  if argv[0]
-    EncryptEnv.show(argv[0])
-  else
-    EncryptEnv.show
-  end
-  exit 0
-elsif action == 'all'
-  EncryptEnv.show('all')
-  exit 0
-elsif action == 'edit'
-  if argv[0]
-    EncryptEnv.edit(argv[0])
-  else
-    EncryptEnv.edit
-  end
-  exit 0
-elsif action == 'get'
-  key = argv[0]
-  env = argv[1]
-  EncryptEnv.valueof(key, env)
-  exit 0
-elsif action == 'new'
-  key = argv[0]
-  env = argv[1]
-  EncryptEnv.update_variable(key, env, true)
-  exit 0
-elsif action == 'update'
-  key = argv[0]
-  env = argv[1]
-  EncryptEnv.update_variable(key, env, false)
-  exit 0
-elsif action == 'delete'
-  key = argv[0]
-  env = argv[1]
-  EncryptEnv.delete_variable(key, env)
-  exit 0
-elsif ['-v', '--version', 'version'].include?(action)
-  puts Version::VERSION
-  exit 0
-elsif ['help', '--help', '-h'].include?(action)
-  puts <<~HELP
-    Usage:
-      encrypt_env setup                                  # To setup for the firt time
-      encrypt_env show all                               # To show all environment variables
-      encrypt_env show / encrypt_env show [environment]  # To show environment variables
-      encrypt_env edit / encrypt_env edit [environment]  # To edit environment variables
-      encrypt_env add variable_name [environment]        # To add environment variable
-      encrypt_env get variable_name [environment]        # To show value of specific variable
-      encrypt_env update variable_name [environment]     # To edit value of specific variable
-      encrypt_env delete variable_name [environment]     # To delete specific variable
-    Or: Visit "https://github.com/nnhutan/encrypt_env" for more information
-  HELP
 
-  exit 0
+when 'show', 'edit'
+  EncryptEnv.send(action, options[:environment], variable_name)
+
+when 'create'
+  unless variable_name
+    puts "Please provide 'variable's name'!"
+    exit
+  end
+
+  if options[:set]
+    EncryptEnv.create_with_value(variable_name, options[:set], options[:environment], options[:type])
+  else
+    EncryptEnv.send(action, variable_name, options[:environment])
+  end
+
+when 'delete'
+  unless variable_name
+    puts "Please provide 'variable's name'!"
+    exit
+  end
+
+  EncryptEnv.send(action, variable_name, options[:environment])
 else
   puts "Unknown action: #{action}"
   puts "Use 'encrypt_env -h' for more help"
-  exit 1
+  exit
 end
