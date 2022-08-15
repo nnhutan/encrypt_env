@@ -121,6 +121,7 @@ class EncryptEnv
       raise e.message
     end
 
+    puts 'Decrypting...'
     decipher = OpenSSL::Cipher.new('aes-128-gcm')
     decipher.decrypt
     data = load_encrypted_data(env)
@@ -153,19 +154,23 @@ class EncryptEnv
   def self.secrets_all
     return all_decrypted_object if @opt == 2
 
-    decrypt
+    decrypt unless @decrypted
     @decrypted
   end
 
   def self.secrets(env = nil)
     load_curr_opt unless @opt
-    return secrets_all if env == 'all'
+    if env == 'all'
+      result = secrets_all
+      @decrypted = nil
+      return result
+    end
 
     if @opt == 1
-      decrypt
+      decrypt unless @decrypted
       @decrypted[env || current_env]
     else
-      decrypt(env || current_env)
+      decrypt(env || current_env) unless @decrypted
       @decrypted
     end
   rescue StandardError => e
@@ -197,7 +202,9 @@ class EncryptEnv
     system("echo 'Set up complete!'")
   end
 
-  def self.edit(env = nil)
+  def self.edit(env = nil, variable_name = nil)
+    variable_name && (return create(variable_name, env, true))
+
     load_curr_opt unless @opt
     env ||= current_env if @opt == 2
     return unless decrypt(env)
@@ -214,7 +221,9 @@ class EncryptEnv
     puts e.message
   end
 
-  def self.show(env = nil)
+  def self.show(env = nil, variable_name = nil)
+    variable_name && (return valueof(variable_name, env))
+
     require 'awesome_print'
     require 'date'
     value = secrets(env)
@@ -233,7 +242,7 @@ class EncryptEnv
     puts value[key]
   end
 
-  def self.delete_variable(key, env = nil)
+  def self.delete(key, env = nil)
     load_curr_opt unless @opt
     if @opt == 1
       puts 'Only for option 2!'
@@ -253,12 +262,81 @@ class EncryptEnv
       return
     end
 
+    tmp_value = value[key]
     value.delete(key)
     encrypt(value.to_hash.to_yaml, env || current_env)
-    puts "Delete '#{key}' successfully!"
+    puts "Delete '#{key}' with value '#{tmp_value}' successfully!"
   end
 
-  def self.update_variable(key, env = nil, add_variable = false)
+  private_class_method def self.define_type_new_variable
+    types = {
+      '1' => 'integer',
+      '2' => 'float',
+      '3' => 'string',
+      '4' => 'boolean'
+    }
+    puts 'What is the type of variable? (1/2/3/4)'
+    puts "1.\t integer"
+    puts "2.\t float"
+    puts "3.\t string"
+    puts "4.\t boolean"
+    puts "Or enter 'q' to cancle!"
+
+    loop do
+      type = $stdin.gets.chomp
+      return types[type] if %w[1 2 3 4].include?(type)
+
+      exit if type == 'q'
+
+      puts 'Just "1", "2", "3", "4" or "q" to cancel!'
+    end
+  end
+
+  private_class_method def self.type_coercion(value, type)
+    unless %w[integer float string boolean].include?(type)
+      puts "Variable's type must be 'interger', 'float', 'string' or 'boolean'!"
+      exit
+    end
+
+    type = define_type_new_variable if type.nil?
+
+    case type
+    when 'integer'
+      value.to_i
+    when 'float'
+      value.to_f
+    when 'string'
+      value
+    when 'boolean'
+      (value == 'true')
+    end
+  end
+
+  def self.create_with_value(key, new_value, env = nil, type = nil)
+    load_curr_opt unless @opt
+    if @opt == 1
+      puts 'Only for option 2!'
+      return
+    end
+
+    new_value = type_coercion(new_value, type)
+
+    tail_msg = env ? " in '#{env}' environment" : nil
+
+    value = secrets(env)
+
+    if value.key?(key)
+      puts "Key existed#{tail_msg}!"
+      return
+    end
+
+    value[key] = new_value
+    encrypt(value.to_hash.to_yaml, env || current_env)
+    @decrypted = nil
+    puts "#{key}\t=>\t#{value[key]}"
+  end
+
+  def self.create(key, env = nil, is_edit = false)
     load_curr_opt unless @opt
     if @opt == 1
       puts 'Only for option 2!'
@@ -267,20 +345,21 @@ class EncryptEnv
     tail_msg = env ? " in '#{env}' environment" : nil
 
     value = secrets(env)
-    if add_variable && value.key?(key)
+
+    if !is_edit && value.key?(key)
       puts "Key existed#{tail_msg}!"
       return
     end
 
-    if !value.key?(key) && !add_variable
-      puts "'#{key}' does not exist#{tail_msg}. You want to add '#{key}' as the new key? (y/n)"
+    if !value.key?(key) && is_edit
+      puts "'#{key}' does not exist#{tail_msg}. You want to create '#{key}' as the new key? (y/n)"
       a = $stdin.gets.chomp
       return unless a == 'y'
 
-      add_variable = true
+      is_edit = false
     end
 
-    action = add_variable && 'add' || 'edit'
+    action = is_edit && 'edit' || 'create'
     file_name = env ? "#{action}_#{key}_#{env}" : "#{action}_#{key}"
 
     Tempfile.create(file_name) do |f|
@@ -297,6 +376,15 @@ class EncryptEnv
     end
 
     puts "#{key}\t=>\t#{value[key]}"
+  end
+
+  # def self.get
+  #   self
+  # end
+
+  def self.method_missing(key, *_args)
+    secrets unless @decrypted
+    @decrypted[key]
   end
 end
 # rubocop:enable Metrics/ClassLength
