@@ -121,7 +121,6 @@ class EncryptEnv
       raise e.message
     end
 
-    puts 'Decrypting...'
     decipher = OpenSSL::Cipher.new('aes-128-gcm')
     decipher.decrypt
     data = load_encrypted_data(env)

@@ -11,10 +11,7 @@ parsers = OptionParser.new do |parser|
   parser.on('-e', '--environment ENVIRONMENT', 'environment')
   parser.on('-s', '--set VALUE', 'value')
   parser.on('-t', '--type TYPE', 'type of variable')
-  parser.on('-a', '--all', 'show all') do
-    EncryptEnv.show('all')
-    exit
-  end
+  parser.on('-a', '--all', 'show all')
   parser.on('-v', '--version', 'version') do
     puts Version::VERSION
     exit
@@ -59,6 +56,10 @@ when 'setup'
   EncryptEnv.setup
 
 when 'show', 'edit'
+  if action == 'show' && options[:all]
+    EncryptEnv.show('all')
+    exit
+  end
   EncryptEnv.send(action, options[:environment], variable_name)
 
 when 'create'
