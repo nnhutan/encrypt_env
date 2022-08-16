@@ -292,12 +292,12 @@ class EncryptEnv
   end
 
   private_class_method def self.type_coercion(value, type)
+    type = define_type_new_variable if type.nil?
+
     unless %w[integer float string boolean].include?(type)
       puts "Variable's type must be 'interger', 'float', 'string' or 'boolean'!"
       exit
     end
-
-    type = define_type_new_variable if type.nil?
 
     case type
     when 'integer'
