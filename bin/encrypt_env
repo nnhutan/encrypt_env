@@ -7,11 +7,23 @@ require 'optparse'
 require_relative '../lib/encrypt_env/version'
 
 options = {}
-parsers = OptionParser.new do |parser|
-  parser.on('-e', '--environment ENVIRONMENT', 'environment')
-  parser.on('-s', '--set VALUE', 'value')
-  parser.on('-t', '--type TYPE', 'type of variable')
-  parser.on('-a', '--all', 'show all')
+OptionParser.new do |parser|
+  parser.on('-e', '--environment ENVIRONMENT', 'environment') do |opts|
+    options[:environment] = opts
+  end
+
+  parser.on('-s', '--set VALUE', 'value') do |opts|
+    options[:set] = opts
+  end
+
+  parser.on('-t', '--type TYPE', 'type of variable') do |opts|
+    options[:type] = opts
+  end
+
+  parser.on('-a', '--all', 'show all') do |_opts|
+    options[:all] = true
+  end
+
   parser.on('-v', '--version', 'version') do
     puts Version::VERSION
     exit
@@ -43,9 +55,9 @@ parsers = OptionParser.new do |parser|
     HELP
     exit
   end
-end
+end.parse!
 
-parsers.parse!(into: options)
+# parsers.parse!
 
 argv = ARGV
 action = argv.shift
