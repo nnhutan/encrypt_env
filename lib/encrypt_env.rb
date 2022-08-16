@@ -6,6 +6,7 @@ require 'yaml'
 require 'active_support/core_ext/hash/indifferent_access'
 require 'tempfile'
 require 'json'
+require 'active_support/ordered_options'
 
 # gem 'encrypt_env'
 # rubocop:disable Metrics/ClassLength
@@ -157,7 +158,7 @@ class EncryptEnv
     @decrypted
   end
 
-  def self.secrets(env = nil)
+  def self.hash_secrets(env = nil)
     load_curr_opt unless @opt
     if env == 'all'
       result = secrets_all
@@ -225,7 +226,7 @@ class EncryptEnv
 
     require 'awesome_print'
     require 'date'
-    value = secrets(env)
+    value = hash_secrets(env)
     ap(value) unless @have_error
     # jj value unless @have_error
     @have_error = false
@@ -233,7 +234,7 @@ class EncryptEnv
 
   def self.valueof(key, env = nil)
     tail_msg = env ? " in '#{env}' environent" : nil
-    value = secrets(env)
+    value = hash_secrets(env)
     unless value.key?(key)
       puts "key '#{key}' does not exist#{tail_msg}!"
       return
@@ -254,7 +255,7 @@ class EncryptEnv
     a = $stdin.gets.chomp
     return unless a == 'y'
 
-    value = secrets(env)
+    value = hash_secrets(env)
 
     unless value.key?(key)
       puts "#{key} does not exist#{tail_msg}!"
@@ -322,7 +323,7 @@ class EncryptEnv
 
     tail_msg = env ? " in '#{env}' environment" : nil
 
-    value = secrets(env)
+    value = hash_secrets(env)
 
     if value.key?(key)
       puts "Key existed#{tail_msg}!"
@@ -343,7 +344,7 @@ class EncryptEnv
     end
     tail_msg = env ? " in '#{env}' environment" : nil
 
-    value = secrets(env)
+    value = hash_secrets(env)
 
     if !is_edit && value.key?(key)
       puts "Key existed#{tail_msg}!"
@@ -377,12 +378,12 @@ class EncryptEnv
     puts "#{key}\t=>\t#{value[key]}"
   end
 
-  # def self.get
-  #   self
-  # end
+  def self.secrets
+    ActiveSupport::OrderedOptions[hash_secrets.deep_symbolize_keys]
+  end
 
   def self.method_missing(key, *_args)
-    secrets unless @decrypted
+    hash_secrets unless @decrypted
     @decrypted[key]
   end
 end
