@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/nnhutan/encrypt_env/compare/v1.3.7...v1.4.0) (2022-08-16)
+
+
+### Features
+
+* Merge pull request [#78](https://github.com/nnhutan/encrypt_env/issues/78) from nnhutan/apply-orderedoption-for-return-hash ([75d63a6](https://github.com/nnhutan/encrypt_env/commit/75d63a6d60c52352ec627a251ef82cad8b4a12b7))
+
 ### [1.3.7](https://github.com/nnhutan/encrypt_env/compare/v1.3.6...v1.3.7) (2022-08-16)
 
 
