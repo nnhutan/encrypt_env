@@ -157,8 +157,10 @@ encrypt_env delete key_base -e production  # delete 'key_base' variable of produ
 In the Rails app, use the following commands to get the value of environment variables
 
 ```
-# EncryptEnv.secrets[:key]
-var = EncryptEnv.secrets[:gem]     # 'var' variable will have the value of the 'gem' environment variable
+# EncryptEnv.secrets[:var_name] || EncryptEnv.secrets.var_name
+var = EncryptEnv.secrets[:gem]   # 'var' variable will have the value of the 'gem' environment variable
+var = EncryptEnv.secrets['gem']  # 'var' variable will have the value of the 'gem' environment variable
+var = EncryptEnv.secrets.gem     # 'var' variable will have the value of the 'gem' environment variable
 
 # or
 
