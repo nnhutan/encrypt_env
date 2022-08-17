@@ -32,7 +32,7 @@ class EncryptEnv
   private_class_method def self.load_curr_opt
     if File.file?("#{@root_path}/config/encrypt_enc/secrets.yml.enc")
       @opt = 1
-    elsif Dir["#{@root_path}/config/encrypt_enc/secrets_*.yml.enc"].length.positive?
+    elsif Dir["#{@root_path}/config/encrypt_enc/secrets_*.yml.enc"].any?
       @opt = 2
     else
       raise 'You must setup first to encrypt file!'
