@@ -50,6 +50,16 @@ You will have 2 options for encrypt/decrypt.
 2. Generate key and encrypted files for each environment
 ```
 
+You need to specify `secret_key_base` in rails app. Add this command:
+
+```
+# config/application.rb
+
+config.secret_key_base = EncryptEnv.secrets.secret_key_base
+```
+
+After setup, encrypted files will be stored in _encrypt_enc_ directory and keys to decrypt will be stored in _master_key_ directory.
+
 - Example:
 
   ```
@@ -64,7 +74,7 @@ You will have 2 options for encrypt/decrypt.
       key: 654321
   ```
 
-  - Option 1: Will generate _master.key_ file and _secrets.yml.enc_ file. Decrypting _secrets.yml.enc_ file will use the key stored in _master.key_ file. The decrypted data will be:
+  - Option 1: Will generate `master_key/master.key` file and `encrypt_enc/secrets.yml.enc` file. Decrypting `secrets.yml.enc` file will use the key stored in `master.key` file. The decrypted data will be:
     ```
     {
         "default" => {
@@ -80,7 +90,7 @@ You will have 2 options for encrypt/decrypt.
         }
     }
     ```
-  - Option 2: Will generate _master_development.key_, _master_production.key_, _secrets_development.yml.enc_ and _secrets_production.yml.enc_ file. Decrypting _secrets_development.yml.enc_ file will use the key stored in _master_development.key_. The decrypted data will be:
+  - Option 2: Will generate `master_key/master_development.key`, `master_key/master_production.key`, `encrypt_enc/secrets_development.yml.enc` and `encrypt_enc/secrets_production.yml.enc` file. Decrypting `secrets_development.yml.enc` file will use the key stored in `master_development.key`. The decrypted data will be:
     `{ gem: "encrypt_env", key: 123456 }`
 
     Note: The _master key_ can be store in `MASTER_KEY` environment variable
