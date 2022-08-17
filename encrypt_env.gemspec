@@ -18,4 +18,5 @@ Gem::Specification.new do |spec|
   spec.metadata = { 'source_code_uri' => 'https://github.com/nnhutan/encrypt_env.git' }
 
   spec.add_dependency 'awesome_print', '~> 1.9', '>= 1.9.2'
+  spec.add_dependency 'rails', '~> 5.0', '>= 5.0.7'
 end
