@@ -20,7 +20,7 @@ class EncryptEnv
     puts '2. Generate master.key and encrypted file for each environment'
 
     loop do
-      @opt = gets.chomp.to_i
+      @opt = $stdin.gets.chomp.to_i
       break if @opt == 1 || @opt == 2
 
       puts "Please enter '1' or '2'!"
@@ -30,9 +30,9 @@ class EncryptEnv
   end
 
   private_class_method def self.load_curr_opt
-    if File.file?("#{@root_path}/config/secrets.yml.enc")
+    if File.file?("#{@root_path}/config/encrypt_enc/secrets.yml.enc")
       @opt = 1
-    elsif Dir["#{@root_path}/config/secrets_*.yml.enc"].length.positive?
+    elsif Dir["#{@root_path}/config/encrypt_enc/secrets_*.yml.enc"].length.positive?
       @opt = 2
     else
       raise 'You must setup first to encrypt file!'
@@ -49,7 +49,7 @@ class EncryptEnv
 
   private_class_method def self.check_key_existence(env = nil)
     file_name = env.nil? ? 'master.key' : "master_#{env}.key"
-    return if File.file?("#{@root_path}/config/#{file_name}")
+    return if File.file?("#{@root_path}/config/master_key/#{file_name}")
     return if ENV.key?('MASTER_KEY')
 
     message = env ? "Missing key of #{env} environment!" : 'Missing master key!'
@@ -63,7 +63,7 @@ class EncryptEnv
       raise e.message
     end
 
-    file_path = env ? "#{@root_path}/config/master_#{env}.key" : "#{@root_path}/config/master.key"
+    file_path = env ? "#{@root_path}/config/master_key/master_#{env}.key" : "#{@root_path}/config/master_key/master.key"
     key = File.file?(file_path) ? File.read(file_path).strip : ENV['MASTER_KEY']
     @master_key = [key].pack('H*')
   end
@@ -71,13 +71,13 @@ class EncryptEnv
   private_class_method def self.generate_keys
     if @opt == 1
       key = OpenSSL::Random.random_bytes(16)
-      File.open("#{@root_path}/config/master.key", 'w') { |file| file.write(key.unpack('H*')[0]) }
+      File.open("#{@root_path}/config/master_key/master.key", 'w') { |file| file.write(key.unpack('H*')[0]) }
     else
       to_hash_type(@content_to_encrypt).each_key do |env|
         next if env == 'default'
 
         key = OpenSSL::Random.random_bytes(16)
-        File.open("#{@root_path}/config/master_#{env}.key", 'w') { |file| file.write(key.unpack('H*')[0]) }
+        File.open("#{@root_path}/config/master_key/master_#{env}.key", 'w') { |file| file.write(key.unpack('H*')[0]) }
       end
     end
   end
@@ -92,7 +92,7 @@ class EncryptEnv
   end
 
   private_class_method def self.load_encrypted_data(env = nil)
-    file_path = env ? "#{@root_path}/config/secrets_#{env}.yml.enc" : "#{@root_path}/config/secrets.yml.enc"
+    file_path = env ? "#{@root_path}/config/encrypt_enc/secrets_#{env}.yml.enc" : "#{@root_path}/config/encrypt_enc/secrets.yml.enc"
     hex_string = File.read(file_path)
     raw_data = [hex_string].pack('H*')
 
@@ -103,7 +103,7 @@ class EncryptEnv
   end
 
   private_class_method def self.encrypt(content, typ = nil)
-    file_path = typ ? "#{@root_path}/config/secrets_#{typ}.yml.enc" : "#{@root_path}/config/secrets.yml.enc"
+    file_path = typ ? "#{@root_path}/config/encrypt_enc/secrets_#{typ}.yml.enc" : "#{@root_path}/config/encrypt_enc/secrets.yml.enc"
     cipher = OpenSSL::Cipher.new('aes-128-gcm')
     cipher.encrypt
     cipher.key = @master_key
@@ -141,7 +141,7 @@ class EncryptEnv
 
   private_class_method def self.all_decrypted_object
     obj = {}
-    env_lst = Dir["#{@root_path}/config/secrets_*.yml.enc"].map do |path|
+    env_lst = Dir["#{@root_path}/config/encrypt_enc/secrets_*.yml.enc"].map do |path|
       path.scan(/secrets_(.*)\.yml\.enc/).flatten.first
     end
     env_lst.each do |e|
@@ -182,6 +182,8 @@ class EncryptEnv
   def self.setup
     define_option
     load_content_to_encrypt
+    system("mkdir -p #{@root_path}/config/master_key")
+    system("mkdir -p #{@root_path}/config/encrypt_enc")
     generate_keys
 
     if @opt == 1
@@ -197,7 +199,7 @@ class EncryptEnv
     end
 
     File.rename("#{@root_path}/config/secrets.yml", "#{@root_path}/config/secrets.yml.old")
-    system("echo '/config/master*.key' >> #{@root_path}/.gitignore")
+    system("echo '/config/master_key/master*.key' >> #{@root_path}/.gitignore")
     system("echo '/config/secrets.yml.old' >> #{@root_path}/.gitignore")
     system("echo 'Set up complete!'")
   end
