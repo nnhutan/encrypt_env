@@ -218,6 +218,7 @@ class EncryptEnv
       system("vim #{f.path}")
       encrypt(File.read(f.path), env)
       @decrypted = nil
+      @result = nil
     end
   rescue StandardError => e
     puts e.message
@@ -335,6 +336,7 @@ class EncryptEnv
     value[key] = new_value
     encrypt(value.to_hash.to_yaml, env || current_env)
     @decrypted = nil
+    @result = nil
     puts "#{key}\t=>\t#{value[key]}"
   end
 
@@ -375,13 +377,18 @@ class EncryptEnv
       value[key] = new_value
       encrypt(value.to_hash.to_yaml, env || current_env)
       @decrypted = nil
+      @result = nil
     end
 
     puts "#{key}\t=>\t#{value[key]}"
   end
 
   def self.secrets
-    ActiveSupport::OrderedOptions[hash_secrets.deep_symbolize_keys]
+    return @result if @result
+
+    @result = ActiveSupport::OrderedOptions[hash_secrets.deep_symbolize_keys]
+
+    @result
   end
 
   def self.method_missing(key, *_args)
