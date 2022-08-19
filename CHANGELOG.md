@@ -1,5 +1,12 @@
 # Changelog
 
+### [1.4.3](https://github.com/nnhutan/encrypt_env/compare/v1.4.2...v1.4.3) (2022-08-19)
+
+
+### Bug Fixes
+
+* Merge pull request [#84](https://github.com/nnhutan/encrypt_env/issues/84) from nnhutan/change-path-save-encrypted ([823f040](https://github.com/nnhutan/encrypt_env/commit/823f0403b369a74f5c9e9b58f1bfb7c9167c6533))
+
 ### [1.4.2](https://github.com/nnhutan/encrypt_env/compare/v1.4.1...v1.4.2) (2022-08-17)
 
 
